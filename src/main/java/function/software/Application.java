@@ -70,6 +70,18 @@ public class Application {
         return memoryUsage / 1024.0 / 1024.0;
     }
 
+    public ArrayList<Object> getChildProcessesUsage(){
+       ArrayList<Object> childProcessUsage = new ArrayList<>();
+        int parentProcessID = getProcessId();
+        List<OSProcess> childProcesses = os.getChildProcesses(parentProcessID, null, null, 0);
+        if(childProcesses.size()>0){
+            for(OSProcess childProcess:childProcesses){
+                childProcessUsage.add(100d * (childProcess.getKernelTime() + childProcess.getUserTime()) / childProcess.getUpTime());
+            }
+        }
+        return childProcessUsage;
+    }
+
 //    public double getDiskUsage(){
 //        process = getProcess();
 //        long bytesRead = process.getBytesRead();
@@ -91,7 +103,7 @@ public class Application {
 //        OperatingSystem os = systemInfo.getOperatingSystem();
 //
 //        for (OSProcess process : os.getProcesses()) {
-//            if (process.getName().toLowerCase().contains(Name.toLowerCase()) || Name.toLowerCase().contains(process.getName().toLowerCase())) {
+//            if (process.getName().toLowerCase().contains(name.toLowerCase()) || name.toLowerCase().contains(process.getName().toLowerCase())) {
 //                int pid = process.getProcessID();
 //                List<OSProcess> childProcesses = os.getChildProcesses(pid, null, null, 0);
 //                String groupPid = process.getGroupID();
