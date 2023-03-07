@@ -3,7 +3,7 @@ package function.hardware;
 import oshi.hardware.CentralProcessor;
 
 
-public class CPUInfo extends HardwareInfo{
+public class CpuInfo extends HardwareInfo{
     CentralProcessor centralProcessor = hal.getProcessor();
     final String model = String.valueOf(centralProcessor);
     final int physicalPackageCount = centralProcessor.getPhysicalPackageCount();

@@ -1,5 +1,6 @@
 package function.software;
 
+import function.hardware.CpuInfo;
 import oshi.SystemInfo;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
@@ -11,12 +12,13 @@ import java.util.Set;
 
 public class Application {
     final private String name;
-    private OSProcess process;
     private ArrayList<Object> childProcessIDs;
     private double cpuUsage;
 
     SystemInfo systemInfo = new SystemInfo();
     OperatingSystem os = systemInfo.getOperatingSystem();
+    CpuInfo cpuInfo = new CpuInfo();
+    private final int cpuNumber = cpuInfo.getLogicalProcessorCount();
 
     public Application(String name) {
         this.name = name;
@@ -26,7 +28,7 @@ public class Application {
         return name;
     }
 
-    private List<OSProcess> getProcess() {
+    private List<OSProcess> getProcesses() {
         List<OSProcess> processes = new ArrayList<>();
         for (OSProcess process : os.getProcesses()) {
             if (process.getName().toLowerCase().contains(name.toLowerCase()) || name.toLowerCase().contains(process.getName().toLowerCase())) {
@@ -37,7 +39,7 @@ public class Application {
     }
 
     public ArrayList<Integer> getProcessId() {
-        List<OSProcess> processes = getProcess();
+        List<OSProcess> processes = getProcesses();
         ArrayList<Integer> processID = new ArrayList<>();
         for (OSProcess osProcess : processes) {
             processID.add(getProcessId(osProcess));
@@ -49,32 +51,44 @@ public class Application {
         return process.getProcessID();
     }
 
+    public ArrayList<Integer> getProcessId(List<OSProcess> processes) {
+        ArrayList<Integer> processIDs = new ArrayList<>();
+        for (OSProcess process : processes) {
+            processIDs.add(process.getProcessID());
+        }
+        return processIDs;
+    }
+
     public List<OSProcess> getChildProcesses() {
         ArrayList<Integer> parentProcessID = getProcessId();
-        List<OSProcess> parentProcesses = getProcess();
+        List<OSProcess> parentProcesses = getProcesses();
         List<OSProcess> childProcesses = new ArrayList<>();
         if (parentProcessID.size() <= 1) {
             childProcesses = os.getChildProcesses(parentProcessID.get(0), null, null, 0);
         } else {
             for (Integer integer : parentProcessID) {
                 List<OSProcess> currentChildProcess;
+                ArrayList<Integer> currentChildProcessIds;
                 currentChildProcess = os.getChildProcesses(integer, null, null, 0);
-                childProcesses.addAll(currentChildProcess);
+                currentChildProcessIds = removeDuplicate(parentProcessID, getProcessId(currentChildProcess));
+                for (Integer currentChildProcessId : currentChildProcessIds) {
+                    childProcesses.add(os.getProcess(currentChildProcessId));
+                }
+
             }
         }
-        removeDuplicate(parentProcesses, childProcesses);
         return childProcesses;
     }
 
     public double getCPUUsage(OSProcess process) {
-        return 100d * (process.getKernelTime() + process.getUserTime()) / process.getUpTime();
+        return (100d * (process.getKernelTime() + process.getUserTime()) / process.getUpTime()) / (os.getFamily().equalsIgnoreCase("windows") ? cpuNumber : 1);
     }
 
     public double getCPUUsage() {
         double cpuUsage = 0;
-        List<OSProcess> processes = getProcess();
+        List<OSProcess> processes = getProcesses();
         if (processes.size() <= 1) {
-            cpuUsage = 100d * (processes.get(0).getKernelTime() + processes.get(0).getUserTime()) / processes.get(0).getUpTime();
+            cpuUsage = (100d * (processes.get(0).getKernelTime() + processes.get(0).getUserTime()) / processes.get(0).getUpTime()) / (os.getFamily().equalsIgnoreCase("windows") ? cpuNumber : 1);
         } else {
             for (OSProcess osProcess : processes) {
                 double processCPUUsage = getCPUUsage(osProcess);
@@ -114,7 +128,7 @@ public class Application {
 
 
     public double getMemoryUsage() {
-        List<OSProcess> processes = getProcess();
+        List<OSProcess> processes = getProcesses();
         double memoryUsage = 0;
         for (OSProcess osProcess : processes) {
             memoryUsage += osProcess.getResidentSetSize();
@@ -129,9 +143,9 @@ public class Application {
         return dupArr;
     }
 
-    private List<OSProcess> removeDuplicate(List<OSProcess> arr1, List<OSProcess> arr2) {
-        Set<OSProcess> set1 = new HashSet<>(arr1);
-        Set<OSProcess> set2 = new HashSet<>(arr2);
+    private ArrayList<Integer> removeDuplicate(ArrayList<Integer> arr1, ArrayList<Integer> arr2) {
+        Set<Integer> set1 = new HashSet<>(arr1);
+        Set<Integer> set2 = new HashSet<>(arr2);
         set1.retainAll(set2);
         arr2.removeAll(set1);
         return arr2;

@@ -1,4 +1,4 @@
 package function.hardware;
 
-public class GPUInfo {
+public class GpuInfo {
 }
